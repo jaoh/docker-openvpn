@@ -1,0 +1,88 @@
+#!/bin/bash
+
+#
+# write a client specific file to enable routing from the serverside network to the clientside network
+#
+#DEBUG=1
+if [ "$DEBUG" == "1" ]; then
+    set -x
+fi
+
+#set -e
+
+
+
+usage() {
+    echo "usage: $0 -c -n -m"
+    echo "                  -c client name"
+    echo "                  -n Clientside networkaddress "
+    echo "                  -m Clientside netmask "
+    echo
+}
+
+OVPN_CLIENT_NAME=0
+OVPN_CLIENT_NET=0
+OVPN_CLIENT_NETMASK=0
+
+OVPN_CCD_DIR="/etc/openvpn/ccd/"
+# Parse arguments
+while getopts ":c:n:m:" opt; do
+    case $opt in
+        c)
+	    OVPN_CLIENT_NAME="$OPTARG"
+            ;;
+        n)
+	    OVPN_CLIENT_NET="$OPTARG"
+	    ;;
+        m)
+	    OVPN_CLIENT_NETMASK="$OPTARG"
+            ;;
+        \?)
+            set +x
+            echo "Invalid option: -$OPTARG" >&2
+            usage
+            exit 1
+            ;;
+        :)
+            set +x
+            echo "Option -$OPTARG requires an argument." >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+# Preserve config
+if [ $OVPN_CLIENT_NAME == 0 ]; then
+   set +x
+   echo "client name missing" >&2
+   usage
+   exit 1
+fi
+
+if [ $OVPN_CLIENT_NET = 0 ]; then
+   set +x
+   echo "client network missing" >&2
+   usage
+   exit 1
+fi
+
+if [ $OVPN_CLIENT_NETMASK == 0 ]; then
+   set +x
+   echo "client networkmask missing" >&2
+   usage
+   exit 1
+fi
+
+if [ "$DEBUG" == "1" ]; then
+   echo "NET"
+   echo $OVPN_CLIENT_NET
+   echo
+   echo "MASK"
+   echo $OVPN_CLIENT_NETMASK
+   echo
+   echo "NAME"
+   echo $OVPN_CLIENT_NAME
+fi
+touch "$OVPN_CCD_DIR$OVPN_CLIENT_NAME"
+echo "iroute $OVPN_CLIENT_NET $OVPN_CLIENT_NETMASK" >> "$OVPN_CCD_DIR""$OVPN_CLIENT_NAME"
