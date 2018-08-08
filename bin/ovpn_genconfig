@@ -104,6 +104,7 @@ usage() {
     echo " -t    Use TAP device (instead of TUN device)"
     echo " -T    Encrypt packets with the given cipher algorithm instead of the default one (tls-cipher)."
     echo " -z    Enable comp-lzo compression."
+    echo " -R    Tells the server to use the directory ./ccd for client specfic routing. "
 }
 
 process_route_config() {
@@ -167,12 +168,15 @@ OVPN_ROUTES=()
 OVPN_SERVER=192.168.255.0/24
 OVPN_SERVER_URL=''
 OVPN_TLS_CIPHER=''
+OVPN_USE_CCD=0
 
 # Import existing configuration if present
 [ -r "$OVPN_ENV" ] && source "$OVPN_ENV"
 
+
 # Parse arguments
-while getopts ":a:e:E:C:T:r:s:du:bcp:n:k:DNm:f:tz2" opt; do
+while getopts ":a:e:E:C:T:r:s:du:bcp:n:k:DNm:f:tz2:R" opt; do
+
     case $opt in
         a)
             OVPN_AUTH="$OPTARG"
@@ -253,6 +257,10 @@ while getopts ":a:e:E:C:T:r:s:du:bcp:n:k:DNm:f:tz2" opt; do
         f)
             OVPN_FRAGMENT="$OPTARG"
             ;;
+        R)
+            echo "use client specific configuration for static routing" 
+            OVPN_USE_CCD=1
+            ;;
         \?)
             set +x
             echo "Invalid option: -$OPTARG" >&2
@@ -267,6 +275,8 @@ while getopts ":a:e:E:C:T:r:s:du:bcp:n:k:DNm:f:tz2" opt; do
             ;;
     esac
 done
+
+
 
 # Create ccd directory for static routes
 [ ! -d "${OPENVPN:-}/ccd" ] && mkdir -p ${OPENVPN:-}/ccd
@@ -396,6 +406,12 @@ if [ ${#OVPN_EXTRA_SERVER_CONFIG[@]} -gt 0 ]; then
   echo -e "\n### Extra Configurations Below" >> "$conf"
   cat $TMP_EXTRA_CONFIGFILE >> "$conf"
 fi
+# Append ccd 
+if [ $OVPN_USE_CCD == 1 ]; then
+  echo -e "\n### tell the server to use the ccd directory" >> "$conf"
+  echo "client-config-dir ccd" >> "$conf" 
+fi
+
 
 set +e
 
@@ -410,3 +426,4 @@ if diff -q "${bak:-}" "$conf" 2>/dev/null; then
 fi
 
 echo "Successfully generated config"
+
